@@ -1,0 +1,715 @@
+/* ================================
+   RESET & BASE
+================================ */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0e27;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #e8eaed;
+}
+
+/* Prevent any accidental horizontal scrolling inside the UI */
+body, #sidebar {
+  overflow-x: hidden;
+}
+
+/* ================================
+   MAP
+================================ */
+#map {
+  width: 100%;
+  height: 100%;
+  background: #7fc2dd;
+}
+
+/* Custom cursor states */
+#map.place-pin-cursor {
+  cursor: crosshair !important;
+}
+
+#map.delete-pin-cursor {
+  cursor: not-allowed !important;
+}
+
+/* Ensure Leaflet's internal cursor rules don't override our mode cursors */
+#map.place-pin-cursor,
+#map.place-pin-cursor * {
+  cursor: crosshair !important;
+}
+#map.delete-pin-cursor,
+#map.delete-pin-cursor * {
+  cursor: not-allowed !important;
+}
+
+/* While Ctrl-delete is active, never show pin tooltips/text */
+body.delete-active .leaflet-tooltip,
+body.delete-active .leaflet-tooltip-pane {
+  display: none !important;
+}
+
+/* Remove default Leaflet styles */
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-pin {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.6);
+  box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  transition: transform 0.15s ease;
+}
+
+.custom-pin:hover {
+  transform: scale(1.3);
+  border-color: rgba(255,255,255,0.8);
+}
+
+/* Tooltip styling */
+.pin-tooltip {
+  background: rgba(20, 24, 45, 0.98) !important;
+  border: 1px solid #3d4466 !important;
+  border-radius: 6px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  color: #e8eaed !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
+  pointer-events: none !important;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: #3d4466 !important;
+}
+
+/* ================================
+   SIDEBAR
+================================ */
+#sidebar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 410px; /* ~25% wider for better one-line titles */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, #1a1f3a 0%, #14182d 100%);
+  border: 1px solid #2d3348;
+  border-radius: 10px;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+}
+
+#sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Sidebar header */
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #2d3348;
+  background: linear-gradient(135deg, rgba(61,68,102,0.3) 0%, rgba(45,51,72,0.2) 100%);
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Sidebar sections */
+.sidebar-section {
+  padding: 8px;
+  border-bottom: 1px solid rgba(45,51,72,0.5);
+}
+
+.sidebar-section:last-of-type {
+  border-bottom: none;
+}
+
+.sidebar-section h3 {
+  margin: 0 0 6px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #8b92b8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* ================================
+   CATEGORIES
+================================ */
+#categoriesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 8px 10px;
+  background: rgba(61,68,102,0.25);
+  border: 1px solid #3d4466;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.category-header:hover {
+  background: rgba(61,68,102,0.4);
+  border-color: #4d5476;
+}
+
+.category-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.category-toggle {
+  cursor: pointer;
+  font-size: 12px;
+  color: #8b92b8;
+  user-select: none;
+  width: 16px;
+  text-align: center;
+}
+
+.category-toggle:hover {
+  color: #fff;
+}
+
+.category-eye {
+  cursor: pointer;
+  font-size: 16px;
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+.category-eye:hover {
+  transform: scale(1.2);
+}
+
+.category-header strong {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.category-delete {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.category-delete:hover {
+  background: rgba(231,76,60,0.2);
+  color: #ff6b5b;
+}
+
+/* ================================
+   PIN TYPES
+================================ */
+.pin-type-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 22px;
+  background: rgba(45,51,72,0.3);
+  border-radius: 4px;
+  margin-top: 3px;
+  transition: background 0.2s ease;
+}
+
+.pin-type-row:hover {
+  background: rgba(45,51,72,0.5);
+}
+
+.pin-type-eye {
+  cursor: pointer;
+  font-size: 14px;
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+.pin-type-eye:hover {
+  transform: scale(1.15);
+}
+
+.pin-type-row input[type="radio"] {
+  cursor: pointer;
+  accent-color: #3498db;
+}
+
+.pin-type-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1;
+  cursor: pointer;
+  font-size: 13px;
+  color: #c5c9d8;
+}
+
+/* Pin type list: keep row compact, place color dot near delete */
+.pin-type-actions{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding-right: 12px;
+}
+
+.pin-type-color-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 10px;
+  min-width: 10px;
+  border: 1px solid rgba(0,0,0,0.45);
+  box-shadow: 0 0 4px rgba(0,0,0,0.25);
+}
+
+.pin-type-color-input{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keep most titles on one line; allow long ones to wrap to a second line cleanly */
+.pin-type-label{
+  min-width: 0;
+  flex: 1;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pin-type-delete{
+  font-size: 13px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin-top: 1px;
+}
+
+.pin-color-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: 0 0 12px;
+  min-width: 12px;
+  border: 1px solid rgba(0,0,0,0.4);
+  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+}
+
+.pin-color-picker {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #3d4466;
+  border-radius: 50%;
+  background: transparent;
+  padding: 0;
+  flex: 0 0 14px;
+  margin-top: 2px;
+}
+
+
+/* Make color inputs consistent bars */
+.pin-color-picker::-webkit-color-swatch-wrapper,
+#newPinColor::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.pin-color-picker::-webkit-color-swatch,
+#newPinColor::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+#newPinColor {
+  width: 100%;
+  height: 18px;
+  border-radius: 6px;
+  padding: 0 !important;
+  border: 1px solid #3d4466;
+  background: transparent;
+}
+
+/* Create Pin Type: keep the swatch a clean full-width bar */
+#newPinColor::-webkit-color-swatch-wrapper { padding: 0; }
+#newPinColor::-webkit-color-swatch { border-radius: 4px; }
+
+.pin-type-delete {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  margin-top: 1px;
+}
+
+.pin-type-delete:hover {
+  background: rgba(231,76,60,0.2);
+  color: #ff6b5b;
+}
+
+.pin-type-empty {
+  padding: 12px 12px 8px 32px;
+  font-size: 12px;
+  color: #6b7196;
+  font-style: italic;
+}
+
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7196;
+  font-style: italic;
+}
+
+/* ================================
+   INPUTS & BUTTONS
+================================ */
+input[type="text"],
+input[type="color"],
+select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 6px;
+  background: rgba(45,51,72,0.5);
+  border: 1px solid #3d4466;
+  border-radius: 6px;
+  color: #e8eaed;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+
+/* Shorter category dropdown */
+.category-select {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.1;
+}
+
+input[type="text"]:focus,
+select:focus {
+  outline: none;
+  border-color: #3498db;
+  background: rgba(45,51,72,0.7);
+}
+
+input[type="text"]::placeholder {
+  color: #6b7196;
+}
+
+input[type="color"] {
+  cursor: pointer;
+  height: 44px;
+  padding: 4px;
+}
+
+/* Category select */
+.category-select-wrapper {
+  margin-bottom: 8px;
+}
+
+.category-select {
+  cursor: pointer;
+}
+
+.category-select-empty {
+  margin: 0 0 8px 0;
+  padding: 10px;
+  background: rgba(231,76,60,0.1);
+  border: 1px solid rgba(231,76,60,0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ff6b5b;
+  text-align: center;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #5dade2 0%, #3498db 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52,152,219,0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: rgba(61,68,102,0.4);
+  border: 1px solid #3d4466;
+  border-radius: 6px;
+  color: #c5c9d8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-secondary:hover {
+  background: rgba(61,68,102,0.6);
+  border-color: #4d5476;
+  color: #fff;
+}
+
+.btn-danger {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #ec7063 0%, #e74c3c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231,76,60,0.3);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+.button-group {
+  display: flex;
+  gap: 8px;
+}
+
+/* ================================
+   SIDEBAR FOOTER
+================================ */
+.sidebar-footer {
+  padding: 16px;
+  background: rgba(20,24,45,0.5);
+  border-top: 1px solid #2d3348;
+}
+
+.sidebar-footer p {
+  margin: 0 0 6px 0;
+  font-size: 11px;
+  color: #8b92b8;
+}
+
+.sidebar-footer p:last-child {
+  margin-bottom: 0;
+}
+
+.sidebar-footer strong {
+  color: #3498db;
+  font-weight: 600;
+}
+
+
+/* Create Pin Type color input fills the row as a clean bar (matches original feel) */
+#newPinColor{
+  width: 100%;
+  height: 18px;
+  border-radius: 6px;
+  padding: 0 !important;
+  border: 1px solid #3d4466;
+  background: transparent;
+}
+
+
+/* --- Unified Create section --- */
+.create-actions{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.create-pin-meta{
+  display:flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.color-bar{
+  width: 100%;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(50, 63, 110, 0.6);
+  background: transparent;
+}
+
+/* No horizontal scroll */
+#sidebar{ overflow-x: hidden; }
+
+/* Keep export/import + footer at bottom */
+#sidebar{
+  display:flex;
+  flex-direction: column;
+}
+.sidebar-footer{
+  margin-top: auto;
+}
+
+
+/* Rename (pencil) buttons */
+.category-header-actions{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+.category-rename, .pin-type-rename{
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+.category-rename:hover, .pin-type-rename:hover{
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+}
+/* Keep delete button from hugging edge too much */
+.category-delete, .pin-type-delete{
+  padding: 4px 6px;
+}
+
+/* Make sure category header layout still aligns with actions wrapper */
+.category-header{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+}
+
+
+
+/* --- Create row sizing: give dropdown more room, shrink colour bar --- */
+.create-pin-meta{
+  display:flex;
+  gap: 8px;
+  align-items: center;
+}
+.category-select-wrapper{
+  flex: 1 1 60%;
+  min-width: 0;
+}
+.category-select-wrapper select,
+#categorySelect select{
+  width: 100%;
+  min-width: 0;
+}
+.color-bar{
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+
+
+/* --- Performance: smoother panning --- */
+#map, .leaflet-container {
+  transform: translateZ(0);
+}
+
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-marker-pane,
+.leaflet-shadow-pane {
+  will-change: transform;
+}
+
+/* Avoid extra repaint work */
+.leaflet-control-container { will-change: auto; }

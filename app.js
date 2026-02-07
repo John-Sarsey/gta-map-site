@@ -61,7 +61,8 @@ createBootOverlay();
 // ================================
 const IMAGE_WIDTH = 8192;
 const IMAGE_HEIGHT = 8192;
-const bounds = [[0,0],[IMAGE_HEIGHT, IMAGE_WIDTH]];
+const imageBounds = L.latLngBounds([[0,0],[IMAGE_HEIGHT, IMAGE_WIDTH]]);
+
 
 let categories = {};
 let pinTypes = {};
@@ -81,19 +82,26 @@ const defaultColors = [
 // MAP SETUP
 // ================================
 const map = L.map("map", {
+  worldCopyJump: false,
+  easeLinearity: 0.25,
+  inertiaMaxSpeed: 2000,
+  inertiaDeceleration: 3000,
+  markerZoomAnimation: false,
+  fadeAnimation: false,
+  preferCanvas: true,
   crs: L.CRS.Simple,
   zoomSnap: 0,
   zoomDelta: 0.25,
   wheelPxPerZoomLevel: 80,
-  zoomAnimation: true,
+  zoomAnimation: false,
   doubleClickZoom: false,
-  inertia: false,
+  inertia: true,
   maxBoundsViscosity: 0.6,
   attributionControl: false,
   zoomControl: false
 });
 
-const overlay = L.imageOverlay("gtav-map.png", bounds).addTo(map);
+const overlay = L.imageOverlay("gtav-map.png", imageBounds).addTo(map);
 
 // Compute a stable "fit to viewport" zoom for the full image.
 // We start at the *max zoom-out level* (minZoom) so the full map is visible with extra margin,
@@ -104,7 +112,7 @@ let _minZoom = null;
 function computeFitZoom() {
   // Small padding gives breathing room around the image.
   const padding = [0, 0];
-  return map.getBoundsZoom(bounds, false, padding);
+  return map.getBoundsZoom(imageBounds, false, padding);
 }
 
 function applyInitialViewport(force = false) {
@@ -125,7 +133,7 @@ function applyInitialViewport(force = false) {
   map.setMaxZoom(nextFit + 3.0);
 
   // Center on the image (prevents the "panned to bottom" feel)
-  const center = L.latLng(IMAGE_HEIGHT / 2, IMAGE_WIDTH / 2);
+  const center = imageBounds.getCenter();
 
   if (force) {
     // Start already at the desired zoom level so there's no visible snap.
@@ -211,8 +219,8 @@ setTimeout(scheduleInitialViewport, 0);
 // On resize: update min/max zoom, but do NOT refit/teleport.
 window.addEventListener("resize", () => requestAnimationFrame(() => applyInitialViewport(false)));
 
-// Softer bounds so it doesn't feel "on rails" when fully zoomed out.
-const softBounds = L.latLngBounds(bounds).pad(0.08); // ~8% padding all around
+// Softer imageBounds so it doesn't feel "on rails" when fully zoomed out.
+const softBounds = L.latLngBounds(imageBounds).pad(0.08); // ~8% padding all around
 map.setMaxBounds(softBounds);
 // Only gently pull back *after* dragging, allowing a little overscroll while dragging.
 map.on("dragend", () => map.panInsideBounds(softBounds, { animate: false }));
