@@ -125,8 +125,8 @@ function applyInitialViewport(force = false) {
   map.invalidateSize(true);
 
   const nextFit = computeFitZoom();
-  const zoomOutAllowance = 5;      // allow further zoom-out than fit      // how much further out than "fit" the user can go
-  const startOutAllowance = 3;     // start more zoomed out than fit     // start slightly more zoomed out than fit     // start at the max zoom-out level (same as min zoom)
+  const zoomOutAllowance = 3;      // allow further zoom-out than fit      // how much further out than "fit" the user can go
+  const startOutAllowance = 2;     // start more zoomed out than fit     // start slightly more zoomed out than fit     // start at the max zoom-out level (same as min zoom)
 
   const nextMin = nextFit - zoomOutAllowance;
   const nextStart = nextFit - startOutAllowance;
