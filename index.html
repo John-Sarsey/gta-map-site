@@ -12,27 +12,21 @@
 <body>
 
   <div id="sidebar">
-    <div class="sidebar-header">
-      <h2>Map Tracker</h2>
-    </div>
-
     <div class="sidebar-section">
-      <h3>Categories</h3>
       <div id="categoriesContainer"></div>
     </div>
 
-    <div class="sidebar-section">
-      <h3>Create Category</h3>
-      <input id="newCategoryName" type="text" placeholder="Category name">
-      <button id="addCategory" class="btn-primary">Add Category</button>
-    </div>
+    <div class="sidebar-section" id="createSection">
+      <input id="newUnifiedName" type="text" placeholder="Name">
+      <div class="create-actions">
+        <button id="addCategoryUnified" class="btn-primary">Add Category</button>
+        <button id="addPinTypeUnified" class="btn-primary">Add Pin</button>
+      </div>
 
-    <div class="sidebar-section">
-      <h3>Create Pin Type</h3>
-      <div id="categorySelect" class="category-select-wrapper"></div>
-      <input id="newPinName" type="text" placeholder="Pin type name">
-      <input id="newPinColor" type="color">
-      <button id="addPinType" class="btn-primary">Add Pin Type</button>
+      <div class="create-pin-meta">
+        <div id="categorySelect" class="category-select-wrapper"></div>
+        <input id="newPinColor" type="color" class="color-input color-bar">
+      </div>
     </div>
 
     <div class="sidebar-section">
@@ -42,16 +36,7 @@
         <button id="importBtn" class="btn-secondary">Import</button>
       </div>
     </div>
-
-    <div class="sidebar-section">
-      <button id="clearPins" class="btn-danger">Clear All Pins</button>
-    </div>
-
-    <div class="sidebar-footer">
-      <p><strong>Shift + Click</strong> to place pin</p>
-      <p><strong>Ctrl + Click</strong> to delete pin</p>
-    </div>
-  </div>
+</div>
 
   <div id="map"></div>
 

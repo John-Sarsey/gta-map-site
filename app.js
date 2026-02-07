@@ -1,3 +1,61 @@
+function pickFirst(...ids){ for (const id of ids){ const el = document.getElementById(id); if (el) return el; } return null; }
+
+// --- Boot overlay to hide initial zoom/fit (prevents visible snapping) ---
+function createBootOverlay() {
+  if (document.getElementById("bootOverlay")) return;
+
+  const mapEl = document.getElementById("map");
+  if (!mapEl) return;
+
+  // Ensure overlay is positioned relative to the map container
+  const cs = window.getComputedStyle(mapEl);
+  if (cs.position === "static") mapEl.style.position = "relative";
+
+  const ov = document.createElement("div");
+  ov.id = "bootOverlay";
+  ov.style.position = "absolute";
+  ov.style.inset = "0";
+  ov.style.background = "#7fc2dd";
+  // Above tiles/markers, below sidebar
+  ov.style.zIndex = "900";
+  ov.style.opacity = "1";
+  ov.style.pointerEvents = "none";
+  ov.style.transition = "opacity 120ms ease";
+
+  // Hide markers/tooltips briefly so they don't appear over the boot overlay
+  const _m = window.__leafletMap;
+  if (_m && _m.getPane) {
+    const panesToHide = ["markerPane", "shadowPane", "tooltipPane", "popupPane"];
+    panesToHide.forEach((p) => {
+      const el = _m.getPane(p);
+      if (el) el.style.opacity = "0";
+    });
+  }
+
+  mapEl.appendChild(ov);
+}
+function hideBootOverlay() {
+  const ov = document.getElementById("bootOverlay");
+  if (!ov) return;
+  // keep it up briefly so tiles render before fade
+  setTimeout(() => {
+    ov.style.opacity = "0";
+
+    // Restore marker/tooltip/popup panes now that overlay is fading out
+    const _m = window.__leafletMap;
+    if (_m && _m.getPane) {
+      const panesToShow = ["markerPane", "shadowPane", "tooltipPane", "popupPane"];
+      panesToShow.forEach((p) => {
+        const el = _m.getPane(p);
+        if (el) el.style.opacity = "1";
+      });
+    }
+
+    setTimeout(() => ov.remove(), 160);
+  }, 150);
+}
+
+createBootOverlay();
 // ================================
 // CONFIG
 // ================================
@@ -24,34 +82,91 @@ const defaultColors = [
 // ================================
 const map = L.map("map", {
   crs: L.CRS.Simple,
-  zoomSnap: 0.1,
-  zoomAnimation: false,
+  zoomSnap: 0,
+  zoomDelta: 0.25,
+  wheelPxPerZoomLevel: 80,
+  zoomAnimation: true,
+  doubleClickZoom: false,
   inertia: false,
+  maxBoundsViscosity: 0.6,
   attributionControl: false,
   zoomControl: false
 });
 
-L.imageOverlay("gtav-map.png", bounds).addTo(map);
+const overlay = L.imageOverlay("gtav-map.png", bounds).addTo(map);
 
-const container = document.getElementById("map");
-const scaleX = container.clientWidth / IMAGE_WIDTH;
-let fitZoom = Math.log2(scaleX);
-let startZoom = fitZoom - 1.2; // More zoomed out on initial load
+// Compute a stable "fit to viewport" zoom for the full image.
+// We start at the *max zoom-out level* (minZoom) so the full map is visible with extra margin,
+// but we cap how far the user can zoom out so it never becomes tiny.
+let _fitZoom = null;
+let _minZoom = null;
 
-map.setView([IMAGE_HEIGHT/2, IMAGE_WIDTH/2], startZoom);
-map.options.minZoom = startZoom;
-map.options.maxZoom = startZoom + 3;
+function computeFitZoom() {
+  // Small padding gives breathing room around the image.
+  const padding = [18, 18];
+  return map.getBoundsZoom(bounds, false, padding);
+}
 
-map.setMaxBounds([[0,-500],[IMAGE_HEIGHT, IMAGE_WIDTH+500]]);
-map.on("drag", () => map.panInsideBounds(map.getBounds(), { animate:false }));
+function applyInitialViewport(force = false) {
+  map.invalidateSize(true);
+
+  const nextFit = computeFitZoom();
+  const zoomOutAllowance = 1.2;      // how much further out than "fit" the user can go
+  const startOutAllowance = 1.2;     // start at the max zoom-out level (same as min zoom)
+
+  const nextMin = nextFit - zoomOutAllowance;
+  const nextStart = nextFit - startOutAllowance;
+
+  // Keep zoom limits stable after first compute, but update them on resize.
+  _fitZoom = (_fitZoom === null || force) ? nextFit : _fitZoom;
+  _minZoom = (_minZoom === null || force) ? nextMin : nextMin;
+
+  map.setMinZoom(_minZoom);
+  map.setMaxZoom(nextFit + 3.0);
+
+  // Center on the image (prevents the "panned to bottom" feel)
+  const center = L.latLng(IMAGE_HEIGHT / 2, IMAGE_WIDTH / 2);
+
+  if (force) {
+    // Start already at the desired zoom level so there's no visible snap.
+    // We also keep the map hidden until this runs (CSS) to avoid a jump on slow loads.
+    map.setView(center, nextStart, { animate: false });
+    document.body.classList.add("map-ready");
+  } else {
+    // On resize, don't teleport the user; just clamp if needed.
+    const z = map.getZoom();
+    if (z < _minZoom) map.setZoom(_minZoom, { animate: false });
+  }
+}
+
+// Run after the overlay + container have painted.
+function scheduleInitialViewport() {
+  document.body.classList.remove("map-ready");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => applyInitialViewport(true));
+  });
+}
+
+overlay.once("load", scheduleInitialViewport);
+// Fallback for cached images that may not fire "load" predictably.
+setTimeout(scheduleInitialViewport, 0);
+
+// On resize: update min/max zoom, but do NOT refit/teleport.
+window.addEventListener("resize", () => requestAnimationFrame(() => applyInitialViewport(false)));
+
+// Softer bounds so it doesn't feel "on rails" when fully zoomed out.
+const softBounds = L.latLngBounds(bounds).pad(0.08); // ~8% padding all around
+map.setMaxBounds(softBounds);
+// Only gently pull back *after* dragging, allowing a little overscroll while dragging.
+map.on("dragend", () => map.panInsideBounds(softBounds, { animate: false }));
 
 // ================================
 // DOM
 // ================================
 const categoriesContainer = document.getElementById("categoriesContainer");
 const categorySelectWrapper = document.getElementById("categorySelect");
-const newCategoryName = document.getElementById("newCategoryName");
-const newPinName = document.getElementById("newPinName");
+const newCategoryName = pickFirst("newUnifiedName","newCategoryName");
+const newPinName = pickFirst("newUnifiedName","newPinName");
 const newPinColor = document.getElementById("newPinColor");
 
 // ================================
@@ -124,7 +239,33 @@ function addPin(pin){
       offset: [0, -5],
       className: "pin-tooltip"
     });
-  }
+
+    // Ensure tooltips still show reliably even while modifier keys are held (e.g., Ctrl delete mode)
+    marker.on("mouseover", (ev)=>{
+      const isDeleting = deleting || (ev && ev.originalEvent && ev.originalEvent.ctrlKey);
+      if(!isDeleting) marker.openTooltip();
+    });
+    marker.on("mouseout", ()=> marker.closeTooltip());
+}
+
+
+  // Allow deleting pins even when the click is captured by the marker (Leaflet stops map click propagation)
+  marker.on("click", (ev)=>{
+    const isDeleting = deleting || (ev && ev.originalEvent && ev.originalEvent.ctrlKey);
+    if(!isDeleting) return;
+
+    // Prevent any other interactions while deleting
+    ev.originalEvent && ev.originalEvent.preventDefault && ev.originalEvent.preventDefault();
+    ev.originalEvent && ev.originalEvent.stopPropagation && ev.originalEvent.stopPropagation();
+    ev.preventDefault && ev.preventDefault();
+    ev.stopPropagation && ev.stopPropagation();
+
+    if(confirm("Delete this pin?")){
+      map.removeLayer(marker);
+      markers = markers.filter(x=>x!==marker);
+      saveToCache();
+    }
+  });
 
   saveToCache();
   return marker;
@@ -136,26 +277,75 @@ function addPin(pin){
 let placing = false;
 let deleting = false;
 
-window.addEventListener("keydown", e=>{
-  if(e.key === "Shift" && !placing){
-    placing = true;
-    map.getContainer().classList.add("place-pin-cursor");
+function setDeleting(on){
+  const next = !!on;
+  if(next === deleting) return;
+  deleting = next;
+  document.body.classList.toggle("delete-active", deleting);
+  if(deleting){
+    // Ensure any open tooltips are closed immediately when entering delete mode
+    markers.forEach(m=>{ try{ m.closeTooltip(); }catch(_){} });
   }
-  if(e.key === "Control" && !deleting){
-    deleting = true;
-    map.getContainer().classList.add("delete-pin-cursor");
+  applyCursorState();
+}
+
+function setPlacing(on){
+  const next = !!on;
+  if(next === placing) return;
+  placing = next;
+  applyCursorState();
+}
+
+function applyCursorState(){
+  const el = map.getContainer();
+  el.classList.toggle("place-pin-cursor", placing);
+  el.classList.toggle("delete-pin-cursor", deleting);
+}
+
+function resetInputModes(){
+  setPlacing(false);
+  setDeleting(false);
+}
+
+// If keydown is missed (e.g. Ctrl already held when the window regains focus),
+// sync modifier state from pointer events over the map.
+function syncModifierState(ev){
+  if(!ev) return;
+  // Use modifier flags from the current event as source of truth
+  setDeleting(!!ev.ctrlKey);
+  setPlacing(!!ev.shiftKey);
+}
+
+// Key tracking (robust against missed keyup events)
+window.addEventListener("keydown", e=>{
+  if(e.key === "Shift"){
+    setPlacing(true);
+  }
+  if(e.key === "Control"){
+    setDeleting(true);
   }
 });
 
 window.addEventListener("keyup", e=>{
   if(e.key === "Shift"){
-    placing = false;
-    map.getContainer().classList.remove("place-pin-cursor");
+    setPlacing(false);
   }
   if(e.key === "Control"){
-    deleting = false;
-    map.getContainer().classList.remove("delete-pin-cursor");
+    setDeleting(false);
   }
+});
+
+// If the tab/window loses focus, don’t allow modes/cursors to get stuck
+window.addEventListener("blur", resetInputModes);
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) resetInputModes();
+});
+
+// Pointer-based sync so holding Ctrl/Shift BEFORE focusing the window still
+// activates the correct cursor/mode as soon as the user interacts with the map.
+const mapEl = map.getContainer();
+["mouseenter","mousemove","mousedown","mouseup"].forEach(evt=>{
+  mapEl.addEventListener(evt, (e)=> syncModifierState(e));
 });
 
 // ================================
@@ -164,12 +354,15 @@ window.addEventListener("keyup", e=>{
 map.on("click", e=>{
   const clickPoint = map.latLngToContainerPoint(e.latlng);
 
-  // DELETE MODE (CTRL) - close tooltips to prevent interference
-  if(deleting){
+  // Fall back to the actual click modifier state (prevents "stuck" modes if keyup is missed)
+  const isDeleting = deleting || (e.originalEvent && e.originalEvent.ctrlKey);
+  const isPlacing = (placing || (e.originalEvent && e.originalEvent.shiftKey)) && !isDeleting;
+
+  // DELETE MODE (CTRL)
+  if(isDeleting){
     for(const m of markers){
       const p = map.latLngToContainerPoint(m.getLatLng());
       if(p.distanceTo(clickPoint) < 12){
-        m.closeTooltip(); // Close tooltip before deletion
         if(confirm("Delete this pin?")){
           map.removeLayer(m);
           markers = markers.filter(x=>x!==m);
@@ -182,7 +375,7 @@ map.on("click", e=>{
   }
 
   // PLACE MODE (SHIFT)
-  if(!placing) return;
+  if(!isPlacing) return;
 
   if(!activePinType){
     alert("Select a pin type first");
@@ -198,7 +391,7 @@ map.on("click", e=>{
   });
 
   placing = false;
-  map.getContainer().classList.remove("place-pin-cursor");
+  applyCursorState();
 });
 
 // ================================
@@ -218,7 +411,10 @@ function renderCategories(){
         <span class="category-eye">${category.visible ? "👁" : "🚫"}</span>
         <strong>${catName}</strong>
       </div>
-      <button class="category-delete" data-category="${catName}">×</button>
+      <div class="category-header-actions">
+        <button class="category-rename" data-category="${catName}" title="Rename">✎</button>
+        <button class="category-delete" data-category="${catName}" title="Delete">×</button>
+      </div>
     `;
 
     catHeader.querySelector(".category-toggle").onclick = ()=>{
@@ -246,7 +442,33 @@ function renderCategories(){
       renderCategories();
     };
 
-    catHeader.querySelector(".category-delete").onclick = ()=>{
+    
+    const renameBtn = catHeader.querySelector(".category-rename");
+    renameBtn.onclick = ()=>{
+      const next = prompt("Rename category:", catName);
+      if(!next) return;
+      const newName = next.trim();
+      if(!newName || newName===catName) return;
+      if(categories[newName]){
+        alert("A category with that name already exists.");
+        return;
+      }
+      // Move category object
+      categories[newName] = categories[catName];
+      delete categories[catName];
+
+      // Update pinTypes that reference this category
+      Object.keys(pinTypes).forEach(t=>{
+        if(pinTypes[t].category === catName) pinTypes[t].category = newName;
+      });
+
+      // Rebuild category dropdown + rerender
+      saveToCache();
+      renderCategorySelect();
+      renderCategories();
+    };
+
+  catHeader.querySelector(".category-delete").onclick = ()=>{
       if(!confirm(`Delete category "${catName}" and all its pin types?`)) return;
 
       // Delete all pin types and pins in this category
@@ -273,7 +495,7 @@ function renderCategories(){
       if(pinTypesInCat.length === 0){
         const emptyMsg = document.createElement("div");
         emptyMsg.className = "pin-type-empty";
-        emptyMsg.textContent = "No pin types yet";
+        emptyMsg.textContent = "No pins yet";
         categoriesContainer.appendChild(emptyMsg);
       } else {
         pinTypesInCat.forEach(typeName=>{
@@ -308,21 +530,35 @@ function renderCategories(){
 
           const label = document.createElement("label");
           label.className = "pin-type-label";
-          label.innerHTML = `
-            <span class="pin-color-swatch" style="background:${pinType.color};"></span>
-            ${typeName}
-          `;
+          label.textContent = typeName;
 
-          const color = document.createElement("input");
-          color.type = "color";
-          color.value = pinType.color;
-          color.className = "pin-color-picker";
-          color.oninput = ()=>{
-            pinType.color = color.value;
-            markers.filter(m=>m.pinData.type===typeName)
-              .forEach(m=>m._icon.querySelector(".custom-pin").style.background=color.value);
+          const actions = document.createElement("div");
+          actions.className = "pin-type-actions";
+
+          // Static color dot next to delete (click dot to change color)
+          const colorDot = document.createElement("span");
+          colorDot.className = "pin-type-color-dot";
+          colorDot.style.background = pinType.color;
+
+          const colorInput = document.createElement("input");
+          colorInput.type = "color";
+          colorInput.value = pinType.color;
+          colorInput.className = "pin-type-color-input"; // hidden via CSS
+          colorInput.oninput = ()=>{
+            pinType.color = colorInput.value;
+            colorDot.style.background = pinType.color;
+            markers
+              .filter(m=>m.pinData.type===typeName)
+              .forEach(m=>{
+                const el = m._icon && m._icon.querySelector(".custom-pin");
+                if(el) el.style.background = pinType.color;
+              });
             saveToCache();
-            renderCategories();
+          };
+
+          colorDot.onclick = (e)=>{
+            e.stopPropagation();
+            colorInput.click();
           };
 
           const del = document.createElement("button");
@@ -338,7 +574,37 @@ function renderCategories(){
             renderCategories();
           };
 
-          row.append(eye, radio, label, color, del);
+          // Rename button
+          const ren = document.createElement("button");
+          ren.textContent = "✎";
+          ren.className = "pin-type-rename";
+          ren.title = "Rename";
+          ren.onclick = (e)=>{
+            e.stopPropagation();
+            const next = prompt("Rename pin:", typeName);
+            if(!next) return;
+            const newName = next.trim();
+            if(!newName || newName===typeName) return;
+            if(pinTypes[newName]){
+              alert("A pin with that name already exists.");
+              return;
+            }
+            // Move pin type
+            pinTypes[newName] = pinTypes[typeName];
+            delete pinTypes[typeName];
+
+            // Update markers
+            markers.forEach(m=>{
+              if(m.pinData.type===typeName) m.pinData.type = newName;
+            });
+
+            if(activePinType === typeName) activePinType = newName;
+            saveToCache();
+            renderCategories();
+          };
+
+          actions.append(colorDot, colorInput, ren, del);
+          row.append(eye, radio, label, actions);
           categoriesContainer.appendChild(row);
         });
       }
@@ -382,7 +648,7 @@ function renderCategorySelect(){
 // ================================
 // ADD CATEGORY
 // ================================
-document.getElementById("addCategory").onclick = ()=>{
+pickFirst("addCategoryUnified","addCategory").onclick = ()=>{
   const name = newCategoryName.value.trim();
   if(!name) return alert("Enter a category name");
   if(categories[name]) return alert("Category already exists");
@@ -401,7 +667,7 @@ document.getElementById("addCategory").onclick = ()=>{
 // ================================
 // ADD PIN TYPE
 // ================================
-document.getElementById("addPinType").onclick = ()=>{
+pickFirst("addPinTypeUnified","addPinType").onclick = ()=>{
   const name = newPinName.value.trim();
   if(!name) return alert("Enter a pin type name");
   if(pinTypes[name]) return alert("Pin type already exists");
@@ -468,7 +734,8 @@ document.getElementById("importPins").onchange = e=>{
 // ================================
 // CLEAR ALL
 // ================================
-document.getElementById("clearPins").onclick = ()=>{
+const __clearPinsBtn = document.getElementById("clearPins");
+if (__clearPinsBtn) __clearPinsBtn.onclick = ()=>{
   if(!confirm("Delete ALL pins?")) return;
   markers.forEach(m=>map.removeLayer(m));
   markers = [];
@@ -480,3 +747,5 @@ document.getElementById("clearPins").onclick = ()=>{
 // ================================
 loadFromCache();
 renderCategorySelect();
+
+requestAnimationFrame(() => requestAnimationFrame(hideBootOverlay));
