@@ -101,6 +101,12 @@ const map = L.map("map", {
   zoomControl: false
 });
 
+
+// Prevent any startup "fit/re-apply" logic from snapping the zoom after the user begins interacting.
+window.__userInteracted = false;
+map.on("dragstart", () => { window.__userInteracted = true; });
+map.on("zoomstart", () => { window.__userInteracted = true; });
+map.on("movestart", () => { window.__userInteracted = true; });
 const overlay = L.imageOverlay("gtav-map.png", imageBounds).addTo(map);
 
 // Compute a stable "fit to viewport" zoom for the full image.
@@ -151,7 +157,7 @@ function applyInitialViewport(force = false) {
 function scheduleInitialViewport() {
   document.body.classList.remove("map-ready");
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => applyInitialViewport(true));
+    requestAnimationFrame(() => (!window.__userInteracted && applyInitialViewport(true)));
   });
 }
 
@@ -162,7 +168,7 @@ function stabilizeAndApplyInitialViewport() {
   // Debounce multiple triggers into one final apply
   if (window.__stabilizeTimer) clearTimeout(window.__stabilizeTimer);
   window.__stabilizeTimer = setTimeout(() => {
-    try { applyInitialViewport(true); } catch (e) {}
+    try { (!window.__userInteracted && applyInitialViewport(true)); } catch (e) {}
   }, 140);
 }
 
@@ -210,7 +216,7 @@ window.addEventListener("load", () => {
 // Ensure first-load zoom matches refresh (wait for full CSS/layout)
 window.addEventListener("load", () => {
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => applyInitialViewport(true));
+    requestAnimationFrame(() => (!window.__userInteracted && applyInitialViewport(true)));
   });
 }, { once: true });
 // Fallback for cached images that may not fire "load" predictably.

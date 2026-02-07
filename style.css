@@ -694,3 +694,22 @@ button {
   flex: 1 1 40%;
   min-width: 0;
 }
+
+
+
+/* --- Performance: smoother panning --- */
+#map, .leaflet-container {
+  transform: translateZ(0);
+}
+
+.leaflet-pane,
+.leaflet-map-pane,
+.leaflet-tile-pane,
+.leaflet-overlay-pane,
+.leaflet-marker-pane,
+.leaflet-shadow-pane {
+  will-change: transform;
+}
+
+/* Avoid extra repaint work */
+.leaflet-control-container { will-change: auto; }
