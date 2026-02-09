@@ -311,7 +311,6 @@ body.delete-active .leaflet-tooltip-pane {
   height: 10px;
   border-radius: 50%;
   flex: 0 0 10px;
-  min-width: 10px;
   border: 1px solid rgba(0,0,0,0.45);
   box-shadow: 0 0 4px rgba(0,0,0,0.25);
 }
@@ -349,7 +348,6 @@ body.delete-active .leaflet-tooltip-pane {
   height: 12px;
   border-radius: 50%;
   flex: 0 0 12px;
-  min-width: 12px;
   border: 1px solid rgba(0,0,0,0.4);
   box-shadow: 0 0 4px rgba(0,0,0,0.3);
 }
@@ -713,3 +711,358 @@ button {
 
 /* Avoid extra repaint work */
 .leaflet-control-container { will-change: auto; }
+
+
+/* PIN IMAGES (URL-only) */
+.pin-tooltip {
+  background: rgba(10, 12, 18, 0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 8px;
+}
+.pin-tooltip-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pin-tooltip-img {
+  width: 420px;
+  max-width: 420px;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+.pin-tooltip-text { font-size: 12px; line-height: 1.3; color: rgba(255,255,255,0.85); max-width: 560px; word-break: break-word; overflow-wrap: anywhere; }
+.pin-image-popup img {
+  width: 560px;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+
+/* Prevent tooltip content from bleeding */
+.pin-tooltip { max-width: 280px; }
+.pin-tooltip-img { max-height: 160px; object-fit: cover; }
+.pin-tooltip-text { font-size: 12px; line-height: 1.3; color: rgba(255,255,255,0.85); max-width: 560px; word-break: break-word; overflow-wrap: anywhere; }
+
+/* Pencil cursor while holding Alt (edit mode) */
+body.alt-edit-mode #map,
+body.alt-edit-mode .leaflet-container {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000000' d='M20.8 4.6l6.6 6.6-15 15-7.4 1 1-7.4 15.8-15.2z'/%3E%3Cpath fill='%23000000' fill-opacity='.35' d='M7 23l2 2 12-12-2-2L7 23z'/%3E%3C/svg%3E") 2 30, auto;
+}
+
+/* Pin edit modal */
+.pin-edit-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.35);
+  z-index: 9999;
+}
+.pin-edit-modal.hidden { display: none; }
+
+.pin-edit-card {
+  width: min(420px, 92vw);
+  background: rgba(18, 22, 34, 0.98);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+}
+
+.pin-edit-title {
+  font-weight: 700;
+  letter-spacing: .3px;
+  margin-bottom: 10px;
+  color: rgba(255,255,255,0.92);
+}
+
+.pin-edit-label {
+  display: block;
+  font-size: 12px;
+  margin: 10px 0 6px;
+  color: rgba(255,255,255,0.65);
+}
+
+.pin-edit-input,
+.pin-edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  outline: none;
+}
+
+.pin-edit-textarea { resize: vertical; min-height: 70px; max-height: 220px; }
+
+.pin-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.pin-edit-btn {
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pin-edit-btn.primary {
+  background: rgba(52, 152, 219, 0.95);
+  color: #fff;
+}
+.pin-edit-btn.secondary {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+}
+
+.pin-edit-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Fullscreen lightbox */
+.pin-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+}
+.pin-lightbox.hidden { display: none; }
+.pin-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.72);
+}
+.pin-lightbox-img {
+  position: relative;
+  max-width: 92vw;
+  max-height: 92vh;
+  border-radius: 14px;
+  box-shadow: 0 22px 60px rgba(0,0,0,0.55);
+}
+
+/* Import merge + Move pins checkbox styling */
+.import-merge-wrap,
+.move-pins-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  user-select: none;
+}
+.import-merge-wrap input,
+.move-pins-wrap input {
+  transform: translateY(1px);
+}
+
+.pin-lightbox-msg{
+  position: relative;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(18,22,34,0.95);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.85);
+  font-size: 12px;
+  max-width: 70vw;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+}
+.pin-lightbox-msg.error{
+  color: rgba(255,210,210,0.95);
+  border-color: rgba(255,140,140,0.35);
+}
+
+
+/* --- Tooltip multiline + no bleed --- */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  white-space: normal !important;
+  max-width: 420px;
+}
+.pin-tooltip-text{
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Make tooltip image constrain but not distort */
+.pin-tooltip-img{
+  max-width: 280px;
+  height: auto;
+  display: block;
+}
+
+/* Lightbox status */
+.pin-lightbox-status{
+  position: relative;
+  z-index: 2;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.55);
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.pin-lightbox-status.hidden{ display:none; }
+
+/* Pencil cursor (black) while holding Alt */
+body.alt-edit-mode #map,
+body.alt-edit-mode .leaflet-container {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cpath fill='%23000000' d='M20.8 4.6l6.6 6.6-15 15-7.4 1 1-7.4 15.8-15.2z'/%3E%3Cpath fill='%23ffffff' fill-opacity='.35' d='M7 23l2 2 12-12-2-2L7 23z'/%3E%3C/svg%3E") 2 30, auto;
+}
+
+
+/* Keep pencil cursor over pins while holding Alt */
+body.alt-edit-mode .leaflet-marker-icon,
+body.alt-edit-mode .leaflet-interactive,
+body.alt-edit-mode .leaflet-pane,
+body.alt-edit-mode .leaflet-container * {
+  cursor: inherit;
+}
+
+
+/* Stronger tooltip width overrides */
+.leaflet-tooltip.pin-tooltip {
+  max-width: 560px !important;
+}
+.pin-tooltip-wrap,
+.pin-tooltip-text {
+  max-width: 560px !important;
+}
+
+
+/* Tooltip text wrapping (prevent vertical letter stacking) */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  white-space: normal !important;
+  max-width: 620px !important;
+  }
+
+.pin-tooltip-wrap,
+.pin-tooltip-text {
+  max-width: 620px !important;
+}
+
+.pin-tooltip-text {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto;
+}
+
+/* If a pin type is disabled only because its category is hidden, dim the icon */
+.pin-type-eye.disabled-by-category {
+  opacity: 0.5;
+}
+
+
+/* Wider tooltips + sane wrapping */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  white-space: normal !important;
+  max-width: 640px !important;
+  }
+
+.pin-tooltip-wrap,
+.pin-tooltip-text {
+  max-width: 640px !important;
+}
+
+.pin-tooltip-text {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto;
+}
+
+
+
+
+/* Tooltip sizing: compact for short text, but capped for long text (no vertical letter stacking) */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  white-space: normal !important;
+  max-width: 520px !important;
+  width: auto !important;
+}
+
+.pin-tooltip-wrap,
+.pin-tooltip-text {
+  max-width: 520px !important;
+}
+
+.pin-tooltip-text {
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  hyphens: auto;
+  line-height: 1.2;
+  /* cap height ~ 2 lines without huge empty space */
+  max-height: 2.4em;
+  overflow: hidden;
+}
+
+
+/* Tooltip width/height: avoid skinny column + avoid huge empty space */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  display: inline-block !important;
+  width: auto !important;
+  max-width: 620px !important;
+  min-width: 0 !important;
+  white-space: normal !important;
+}
+
+.pin-tooltip-wrap {
+  max-width: 620px !important;
+}
+
+.pin-tooltip-text {
+  max-width: 620px !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+
+/* Tooltip: compact for short labels, wide enough for normal text, capped for long */
+.leaflet-tooltip.pin-tooltip,
+.pin-tooltip {
+  display: inline-block !important;
+  width: max-content !important;      /* shrink to content */
+  max-width: 520px !important;        /* but allow wider than before */
+  white-space: normal !important;
+}
+
+.pin-tooltip-wrap,
+.pin-tooltip-text {
+  max-width: 520px !important;
+}
+
+/* Clamp to ~2 lines without making the box tall */
+.pin-tooltip-text {
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+}
