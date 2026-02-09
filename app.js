@@ -950,14 +950,25 @@ function renderCategories(){
           label.textContent = typeName;
           const actions = document.createElement("div");
           actions.className = "pin-type-actions";
-          // Make the whole row clickable (better UX than tiny eye when greyed out)
+          // Row click: select the pin type. If it is currently greyed out (hidden by category or self),
+          // also toggle it ON with a single click.
           row.onclick = (ev)=>{
             if(ev) ev.stopPropagation();
+
             // Ignore clicks on the eye itself or action buttons (they handle their own clicks)
             if(ev.target && (ev.target.classList && ev.target.classList.contains("pin-type-eye"))) return;
             if(ev.target && ev.target.closest && ev.target.closest(".pin-type-actions")) return;
-            // Delegate to the same logic as the eye
-            eye.onclick(ev);
+
+            // Always select this pin type (restore original UX)
+            activePinType = typeName;
+            renderCategorySelect();
+
+            // If this pin type isn't effectively visible, turn it on (same logic as eye)
+            const catNow = categories[pinType.category];
+            const effectiveVisibleNow = !!(catNow && catNow.visible && pinType.visible);
+            if(!effectiveVisibleNow){
+              eye.onclick(ev); // will unhide/solo if needed
+            }
           };
           row.style.cursor = "pointer";
 
